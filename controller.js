@@ -95,3 +95,70 @@ export const getProfileController = async req => {
     return { ...error, response: error.error };
   }
 };
+
+export const refreshTokenController = async req => {
+  const { refresh_token } = req.body;
+  try {
+    const decodedRefreshToken = await verifyToken(refresh_token, TOKEN_TYPE.refreshToken);
+    const { username } = decodedRefreshToken;
+    const database = getDatabase();
+    const isAccountExist = database.users.some(user => user.username === username);
+    const isRefreshTokenExist = database.refresh_tokens.some(refreshTokenObject => refreshTokenObject.token === refresh_token);
+
+    if (isAccountExist && isRefreshTokenExist) {
+      const access_token = await signToken(
+        {
+          username,
+          tokenType: TOKEN_TYPE.accessToken,
+        },
+        config.jwt_expire_access_token
+      );
+      database.access_tokens.push({
+        username,
+        token: access_token,
+      });
+      writeDatabase(database);
+      return {
+        status: STATUS.OK,
+        response: {
+          message: 'Refresh Token thành công',
+          data: { access_token },
+        },
+      };
+    }
+    return {
+      status: STATUS.NOT_FOUND,
+      response: { message: 'Refresh Token không tồn tại' },
+    };
+  } catch (error) {
+    return { ...error, response: error.error };
+  }
+};
+
+export const getProductsController = async (req) => {
+  const access_token = req.headers.authorization?.replace('Bearer ', '')
+  try {
+    const decodedAccessToken = await verifyToken(access_token)
+    const { username } = decodedAccessToken
+    const database = getDatabase()
+    const account = database.users.find((user) => user.username === username)
+    const isAccessTokenExist = database.access_tokens.some(
+      (accessTokenObject) => accessTokenObject.token === access_token
+    )
+    if (account && isAccessTokenExist) {
+      return {
+        status: STATUS.OK,
+        response: {
+          message: 'Lấy danh sách sản phẩm thành công',
+          data: database.products
+        }
+      }
+    }
+    return {
+      status: STATUS.NOT_FOUND,
+      response: { message: 'Không tồn tại user' }
+    }
+  } catch (error) {
+    return { ...error, response: error.error }
+  }
+}

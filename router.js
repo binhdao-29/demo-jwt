@@ -13,4 +13,14 @@ router.get('/profile', async (req, res) => {
   res.status(resData.status).send(resData.response);
 })
 
+router.post('/refresh-token', async (req, res) => {
+  const resData = await refreshTokenController(req)
+  res.status(resData.status).send(resData.response)
+})
+
+router.get('/products', async (req, res) => {
+  const resData = await getProductsController(req)
+  res.status(resData.status).send(resData.response)
+})
+
 export default router;
